@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package currencymarket;
+
+option go_package = "/currencymarketpb";
+
+message Trade {
+  string user_id = 1;
+  string currency_from = 2;
+  string currency_to = 3;
+  int64 amount_sell_micros = 4;
+  int64 amount_buy_micros = 5;
+  int64 time_placed_ms = 6;
+  string originating_country = 7;
+}
