@@ -18,6 +18,14 @@ services:
         condition: service_healthy
       clickhouse:
         condition: service_healthy
+  trends:
+    build: ./trends
+    command: --clickhouse.host clickhouse --clickhouse.port 9000
+    ports:
+      - 8082:8082
+    depends_on:
+      clickhouse:
+        condition: service_healthy
   kafka:
     image: apache/kafka:latest
     ports:
