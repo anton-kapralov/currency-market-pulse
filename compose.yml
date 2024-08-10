@@ -23,7 +23,7 @@ services:
         condition: service_healthy
   trends:
     build: ./trends
-    command: --clickhouse.host clickhouse --clickhouse.port 9000
+    command: --clickhouse.host clickhouse --clickhouse.port 9000 --memcache memcache:11211
     ports:
       - 8082
     deploy:
@@ -31,6 +31,8 @@ services:
       replicas: 3
     depends_on:
       clickhouse:
+        condition: service_healthy
+      memcache:
         condition: service_healthy
   kafka:
     image: apache/kafka:latest
@@ -64,6 +66,18 @@ services:
       - ~/.clickhouse/data/cmp:/var/lib/clickhouse/
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
+      interval: 1s
+      timeout: 60s
+      retries: 60
+  memcache:
+    image: memcached:alpine
+    ports:
+      - 11211
+    deploy:
+      mode: replicated
+      replicas: 2
+    healthcheck:
+      test: nc -z localhost 11211
       interval: 1s
       timeout: 60s
       retries: 60

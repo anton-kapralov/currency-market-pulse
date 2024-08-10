@@ -6,6 +6,7 @@ require (
 	github.com/ClickHouse/ch-go v0.61.5
 	github.com/ClickHouse/clickhouse-go/v2 v2.26.0
 	github.com/IBM/sarama v1.43.2
+	github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874
 	github.com/gin-gonic/gin v1.10.0
 	google.golang.org/protobuf v1.34.1
 )

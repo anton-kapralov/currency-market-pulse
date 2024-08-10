@@ -9,6 +9,7 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/gin-gonic/gin"
 
 	"github.com/anton-kapralov/currency-market-pulse/trends/http/rest"
@@ -38,21 +39,35 @@ func newClickhouseConnection(host string, port int) driver.Conn {
 	return conn
 }
 
+type multiStringVar []string
+
+func (f *multiStringVar) String() string {
+	return fmt.Sprint([]string(*f))
+}
+
+func (f *multiStringVar) Set(value string) error {
+	*f = append(*f, value)
+	return nil
+}
+
 type options struct {
 	clickhouse struct {
 		host string
 		port int
 	}
+	memcacheServers multiStringVar
 }
 
 func main() {
 	var opts options
 	flag.StringVar(&opts.clickhouse.host, "clickhouse.host", "localhost", "Kafka host")
 	flag.IntVar(&opts.clickhouse.port, "clickhouse.port", 9000, "Kafka port")
+	flag.Var(&opts.memcacheServers, "memcache", "Memcache server(s)")
 	flag.Parse()
 
 	clickhouseConn := newClickhouseConnection(opts.clickhouse.host, opts.clickhouse.port)
-	listingService := listing.NewService(clickhouseConn)
+	mc := newMemcacheClient(opts.memcacheServers)
+	listingService := listing.NewService(clickhouseConn, mc)
 
 	restController := rest.NewController(listingService)
 
@@ -60,4 +75,16 @@ func main() {
 	router.GET("/api/trends", restController.Trends)
 
 	log.Fatalln(router.Run(":8082"))
+}
+
+func newMemcacheClient(addrs []string) *memcache.Client {
+	log.Printf("Connecting to Memcache at %s", addrs)
+	if addrs == nil {
+		addrs = []string{"localhost:11211"}
+	}
+	client := memcache.New(addrs...)
+	if err := client.Ping(); err != nil {
+		log.Fatalf("Failed to connect to Clickhouse at %s: %s", addrs, err)
+	}
+	return client
 }
