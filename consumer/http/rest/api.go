@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/anton-kapralov/currency-market-pulse/consumer/consuming"
+	"github.com/anton-kapralov/currency-market-pulse/consumer/ratelimit"
 	"github.com/anton-kapralov/currency-market-pulse/proto-gen/currencymarketpb"
 )
 
@@ -27,11 +29,12 @@ type Controller interface {
 }
 
 type controller struct {
-	consumer consuming.Service
+	consumer    consuming.Service
+	rateLimiter ratelimit.RateLimiter
 }
 
-func NewController(consumer consuming.Service) Controller {
-	return &controller{consumer: consumer}
+func NewController(consumer consuming.Service, rateLimiter ratelimit.RateLimiter) Controller {
+	return &controller{consumer: consumer, rateLimiter: rateLimiter}
 }
 
 func (c *controller) SaveTradeMessage(ctx *gin.Context) {
@@ -41,6 +44,20 @@ func (c *controller) SaveTradeMessage(ctx *gin.Context) {
 		return
 	}
 	log.Printf("%+v", msg)
+
+	timeToWait, err := c.rateLimiter.ShouldWait(ctx, msg.UserId)
+	if err != nil {
+		log.Println(err)
+		ctx.Status(http.StatusInternalServerError)
+		return
+	}
+	if timeToWait > 0 {
+		errorMsg := fmt.Sprintf("You must wait %s before you can make requests.", timeToWait)
+		ctx.Header("X-Ratelimit-Retry-After", time.Now().Add(timeToWait).UTC().Format(time.RFC3339))
+		ctx.JSON(http.StatusTooManyRequests, gin.H{"error": errorMsg})
+		return
+	}
+
 	timePlaced, err := time.Parse("02-Jan-06 15:04:05", msg.TimePlaced)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

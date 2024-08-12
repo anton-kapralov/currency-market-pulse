@@ -3,12 +3,14 @@ services:
     build: ./consumer
     ports:
       - 8081
-    command: --kafka.host kafka --kafka.port 19092
+    command: --kafka.host kafka --kafka.port 19092 --redis.host redis --redis.port 6379 --ratelimit.duration 1s --ratelimit.limit 100
     deploy:
       mode: replicated
       replicas: 3
     depends_on:
       kafka:
+        condition: service_healthy
+      redis:
         condition: service_healthy
   importer:
     build: ./importer
@@ -78,6 +80,15 @@ services:
       replicas: 2
     healthcheck:
       test: nc -z localhost 11211
+      interval: 1s
+      timeout: 60s
+      retries: 60
+  redis:
+    image: redis:latest
+    ports:
+      - 6379:6379
+    healthcheck:
+      test: redis-cli ping
       interval: 1s
       timeout: 60s
       retries: 60
