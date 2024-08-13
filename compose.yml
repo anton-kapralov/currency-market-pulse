@@ -74,7 +74,7 @@ services:
   memcache:
     image: memcached:alpine
     ports:
-      - 11211
+      - 11211:11211
     deploy:
       mode: replicated
       replicas: 2
