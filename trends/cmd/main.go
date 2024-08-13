@@ -39,6 +39,18 @@ func newClickhouseConnection(host string, port int) driver.Conn {
 	return conn
 }
 
+func newMemcacheClient(addrs []string) *memcache.Client {
+	log.Printf("Connecting to Memcache at %s", addrs)
+	if addrs == nil {
+		addrs = []string{"localhost:11211"}
+	}
+	client := memcache.New(addrs...)
+	if err := client.Ping(); err != nil {
+		log.Fatalf("Failed to connect to Memcache at %s: %s", addrs, err)
+	}
+	return client
+}
+
 type multiStringVar []string
 
 func (f *multiStringVar) String() string {
@@ -75,16 +87,4 @@ func main() {
 	router.GET("/api/trends", restController.Trends)
 
 	log.Fatalln(router.Run(":8082"))
-}
-
-func newMemcacheClient(addrs []string) *memcache.Client {
-	log.Printf("Connecting to Memcache at %s", addrs)
-	if addrs == nil {
-		addrs = []string{"localhost:11211"}
-	}
-	client := memcache.New(addrs...)
-	if err := client.Ping(); err != nil {
-		log.Fatalf("Failed to connect to Clickhouse at %s: %s", addrs, err)
-	}
-	return client
 }
