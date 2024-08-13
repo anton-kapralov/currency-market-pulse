@@ -113,8 +113,9 @@ func (s *cachedService) cache(key string, statistics []Statistic) error {
 		return fmt.Errorf("failed to encode the results: %v", err)
 	}
 	cacheItem := &memcache.Item{
-		Key:   key,
-		Value: buf.Bytes(),
+		Key:        key,
+		Value:      buf.Bytes(),
+		Expiration: int32(time.Minute.Seconds()),
 	}
 	if err := s.mc.Set(cacheItem); err != nil {
 		return fmt.Errorf("failed to cache the results: %v", err)
